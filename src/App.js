@@ -35,7 +35,7 @@ const App = () => {
       role: 'assistant',
       content: `I'm concerned about what you're sharing. Your life has value and there are people who care about you and want to help.
 
-**If you're in immediate danger, please call emergency services right now:**
+**I'm really worried about you. If you're thinking about hurting yourself, please call 988 right now! If you need to call 911 instead, I can help you explain what's happening. I can give you a summary of our conversation to share with the operator if that would help. I'm staying right here with you. I won't leave your side.**
 - **Emergency: 911** (US/Canada)
 - **National Suicide Prevention Lifeline: 988** (US)
 - **Crisis Text Line: Text HOME to 741741** (US)
