@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, AlertTriangle, Heart } from 'lucide-react';
+import { Send, AlertTriangle, Heart, Gift } from 'lucide-react';
 import './App.css';
 
 const App = () => {
@@ -7,8 +7,7 @@ const App = () => {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showCrisisAlert, setShowCrisisAlert] = useState(false);
-  const [apiKey, setApiKey] = useState('');
-  const [showApiKeyInput, setShowApiKeyInput] = useState(true);
+  const [showPayItForward, setShowPayItForward] = useState(false);
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -46,25 +45,64 @@ const App = () => {
     };
   };
 
-  const getGrowthCoachingPrompt = (userMessage) => {
-    return `You are Haven, a compassionate AI mental health coach. Your role is to provide supportive, growth-oriented responses that help users develop resilience and self-awareness.
+  // Positive keywords for detecting uplifting conversations
+  const positiveKeywords = [
+    'thank you', 'thanks', 'grateful', 'appreciate', 'better', 'improved',
+    'feeling good', 'happy', 'excited', 'hopeful', 'optimistic', 'positive',
+    'breakthrough', 'progress', 'growth', 'learning', 'insight', 'realization',
+    'feeling better', 'much better', 'great', 'wonderful', 'amazing'
+  ];
 
-Guidelines:
-- Be warm, empathetic, and non-judgmental
-- Ask thoughtful questions that encourage self-reflection
-- Offer gentle challenges that promote growth and perspective
-- Validate feelings while encouraging positive action
-- Use a conversational, caring tone
-- Keep responses concise but meaningful (2-4 sentences)
-- Focus on the user's strengths and potential
+  const detectPositiveConversation = (messages) => {
+    if (messages.length < 4) return false; // Need at least 4 messages for a meaningful conversation
+    
+    const recentMessages = messages.slice(-4); // Check last 4 messages
+    const userMessages = recentMessages.filter(msg => msg.role === 'user');
+    
+    if (userMessages.length < 2) return false;
+    
+    const userText = userMessages.map(msg => msg.content.toLowerCase()).join(' ');
+    const hasPositiveKeywords = positiveKeywords.some(keyword => userText.includes(keyword));
+    
+    // Also check if the conversation has been going well (no crisis detected)
+    const hasNoCrisis = !recentMessages.some(msg => msg.isCrisis);
+    
+    return hasPositiveKeywords && hasNoCrisis;
+  };
 
-User message: "${userMessage}"
+  const handlePayItForward = () => {
+    // Add a message about paying it forward
+    const payItForwardMessage = {
+      role: 'assistant',
+      content: `That's wonderful! Here are some ways you can pay it forward and spread kindness:
 
-Respond as Haven:`;
+**💝 Simple Acts of Kindness:**
+- Send a thoughtful message to someone who's been on your mind
+- Compliment a stranger or colleague
+- Hold the door open for someone
+- Leave an encouraging note for someone
+
+**🤝 Support Others:**
+- Listen to a friend who needs to talk
+- Share your experience with someone going through something similar
+- Volunteer your time to help others
+- Donate to a mental health organization
+
+**🌱 Plant Seeds of Positivity:**
+- Share what you've learned from our conversation
+- Encourage someone to seek help if they're struggling
+- Be the person you needed when you were going through a tough time
+
+Remember, even small acts of kindness can make a huge difference in someone's day. What resonates with you?`,
+      timestamp: new Date().toISOString()
+    };
+    
+    setMessages(prev => [...prev, payItForwardMessage]);
+    setShowPayItForward(false);
   };
 
   const sendMessage = async () => {
-    if (!inputValue.trim() || !apiKey) return;
+    if (!inputValue.trim()) return;
 
     const userMessage = inputValue.trim();
     setInputValue('');
@@ -88,46 +126,40 @@ Respond as Haven:`;
     }
 
     try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          model: 'gpt-3.5-turbo',
-          messages: [
-            {
-              role: 'system',
-              content: 'You are Haven, a compassionate AI mental health coach focused on growth and resilience.'
-            },
-            {
-              role: 'user',
-              content: getGrowthCoachingPrompt(userMessage)
-            }
-          ],
-          max_tokens: 300,
-          temperature: 0.7
+          message: userMessage
         })
       });
 
       if (!response.ok) {
-        throw new Error('Failed to get response from OpenAI');
+        throw new Error('Failed to get response from server');
       }
 
       const data = await response.json();
       const assistantMessage = {
         role: 'assistant',
-        content: data.choices[0].message.content,
-        timestamp: new Date().toISOString()
+        content: data.content,
+        timestamp: data.timestamp || new Date().toISOString(),
+        isCrisis: data.isCrisis || false
       };
 
       setMessages(prev => [...prev, assistantMessage]);
+      
+      // Check for positive conversation after adding the assistant message
+      const updatedMessages = [...messages, newUserMessage, assistantMessage];
+      if (detectPositiveConversation(updatedMessages)) {
+        setShowPayItForward(true);
+      }
     } catch (error) {
       console.error('Error:', error);
       const errorMessage = {
         role: 'assistant',
-        content: 'I apologize, but I\'m having trouble connecting right now. Please check your internet connection and try again. Remember, if you\'re in crisis, help is always available at 988.',
+        content: 'Oh no, I\'m having a little trouble connecting right now. Can you check your internet connection and try again? I really want to be here for you, so don\'t hesitate to reach out again. And remember, if you\'re in crisis, help is always available at 988.',
         timestamp: new Date().toISOString()
       };
       setMessages(prev => [...prev, errorMessage]);
@@ -143,55 +175,16 @@ Respond as Haven:`;
     }
   };
 
-  const handleApiKeySubmit = (e) => {
-    e.preventDefault();
-    if (apiKey.trim()) {
-      setShowApiKeyInput(false);
-      // Add welcome message
+  // Add welcome message on component mount
+  useEffect(() => {
+    if (messages.length === 0) {
       setMessages([{
         role: 'assistant',
-        content: 'Welcome to Haven! I\'m here to support your mental health journey. I\'m trained to provide compassionate, growth-oriented responses. What\'s on your mind today?',
+        content: 'Hey there! I\'m Haven, and I\'m so glad you\'re here. I\'m like that friend who always knows exactly what to say - someone who truly cares about you and wants the best for you. I\'m here to listen, support you, and help you grow. What\'s on your mind today? I\'m all ears! 💙',
         timestamp: new Date().toISOString()
       }]);
     }
-  };
-
-  if (showApiKeyInput) {
-    return (
-      <div className="app">
-        <div className="api-key-container">
-          <div className="api-key-card">
-            <div className="logo">
-              <Heart className="logo-icon" />
-              <h1>Haven</h1>
-            </div>
-            <p className="subtitle">Mental Health Chat Support</p>
-            
-            <form onSubmit={handleApiKeySubmit} className="api-form">
-              <div className="input-group">
-                <label htmlFor="apiKey">OpenAI API Key</label>
-                <input
-                  type="password"
-                  id="apiKey"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="Enter your OpenAI API key"
-                  required
-                />
-              </div>
-              <button type="submit" className="start-button">
-                Start Chatting
-              </button>
-            </form>
-            
-            <div className="api-info">
-              <p>Don't have an API key? Get one at <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">OpenAI Platform</a></p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  }, []);
 
   return (
     <div className="app">
@@ -201,12 +194,6 @@ Respond as Haven:`;
             <Heart className="logo-icon" />
             <h1>Haven</h1>
           </div>
-          <button 
-            className="api-key-button"
-            onClick={() => setShowApiKeyInput(true)}
-          >
-            Change API Key
-          </button>
         </div>
       </header>
 
@@ -240,6 +227,23 @@ Respond as Haven:`;
         </div>
 
         <div className="input-container">
+          {showPayItForward && (
+            <div className="pay-it-forward-container">
+              <button
+                onClick={handlePayItForward}
+                className="pay-it-forward-button"
+              >
+                <Gift size={18} />
+                <span>Pay It Forward</span>
+              </button>
+              <button
+                onClick={() => setShowPayItForward(false)}
+                className="pay-it-forward-dismiss"
+              >
+                Maybe later
+              </button>
+            </div>
+          )}
           <div className="input-wrapper">
             <textarea
               value={inputValue}
