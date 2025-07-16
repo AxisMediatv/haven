@@ -178,9 +178,17 @@ Remember, even small acts of kindness can make a huge difference in someone's da
   // Add welcome message on component mount
   useEffect(() => {
     if (messages.length === 0) {
+      const greetings = [
+        "Hi, I missed you. How have you been?",
+        "Hey, it's good to hear from you",
+        "Let's have some one-on-one time to talk",
+        "I'm all ears, let it all out",
+        "It's great to be here with you. What's going on?"
+      ];
+      const randomGreeting = greetings[Math.floor(Math.random() * greetings.length)];
       setMessages([{
         role: 'assistant',
-        content: 'Hey there! I\'m Haven, and I\'m so glad you\'re here. I\'m like that friend who always knows exactly what to say - someone who truly cares about you and wants the best for you. I\'m here to listen, support you, and help you grow. What\'s on your mind today? I\'m all ears! 💙',
+        content: randomGreeting,
         timestamp: new Date().toISOString()
       }]);
     }
