@@ -177,7 +177,7 @@ Remember, even small acts of kindness can make a huge difference in someone's da
 
   // Add welcome message on component mount
   useEffect(() => {
-    if (messages.length === 7) {
+    if (messages.length === 0) {
       const greetings = [
     const greetings = [
   "Hi, I missed you. How have you been?",
