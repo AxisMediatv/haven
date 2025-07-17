@@ -3,9 +3,6 @@
   "version": "1.0.0",
   "description": "A React mental health chat app with OpenAI integration and crisis detection",
   "private": true,
-  "engines": {
-    "node": "18.x"
-  },
   "dependencies": {
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.4.0",
