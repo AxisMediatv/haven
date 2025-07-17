@@ -224,6 +224,3 @@ Respond as Haven, following the philosophy: comfort is the enemy of excellence. 
     });
   }
 }
-git add .
-
-

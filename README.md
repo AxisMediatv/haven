@@ -110,3 +110,4 @@ This project is licensed under the MIT License.
 ## Support
 
 For support or questions about the mental health features, please reach out through the appropriate channels. Remember, this is not a replacement for professional mental health care.
+Commit changes

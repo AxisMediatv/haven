@@ -35,7 +35,7 @@ const App = () => {
       role: 'assistant',
       content: `I'm concerned about what you're sharing. Your life has value and there are people who care about you and want to help.
 
-**If you're in immediate danger, please call emergency services right now:**
+**I'm really worried about you. If you're thinking about hurting yourself, please call 988 right now! If you need to call 911 instead, I can help you explain what's happening. I can give you a summary of our conversation to share with the operator if that would help. I'm staying right here with you. I won't leave your side.**
 - **Emergency: 911** (US/Canada)
 - **National Suicide Prevention Lifeline: 988** (US)
 - **Crisis Text Line: Text HOME to 741741** (US)
@@ -180,12 +180,15 @@ Remember, even small acts of kindness can make a huge difference in someone's da
   useEffect(() => {
     if (messages.length === 0) {
       const greetings = [
-        "Hi, I missed you. How have you been?",
-        "Hey, it's good to hear from you",
-        "Let's have some one-on-one time to talk",
-        "I'm all ears, let it all out",
-        "It's great to be here with you. What's going on?"
-      ];
+    const greetings = [
+  "Hi, I missed you. How have you been?",
+  "Hi there! How's it going? I would love to hear more. Remember, I am here for you",
+  "Hey, how are you feeling today? I want to take some time to just listen to you. Tell me what's going on",
+  "Hey! Talk to me - what's going on?",
+  "Hey, it's good to hear from you. Let's have some one-on-one time to talk",
+  "I'm all ears, let it all out. What's on your mind?",
+  "It's great to be here with you. Do you have a few moments to tell me what's going on?"
+];
       const randomGreeting = greetings[Math.floor(Math.random() * greetings.length)];
       setMessages([{
         role: 'assistant',
@@ -293,6 +296,7 @@ Remember, even small acts of kindness can make a huge difference in someone's da
 };
 
 export default App; 
+<<<<<<< HEAD
 // force deploy
 // Force new deployment
 
@@ -300,3 +304,5 @@ export default App;
 // git add .
 // git commit -m "Force new deployment"
 // git push
+=======
+>>>>>>> 643657a5bcd3742c523e8c52f40a339e7321586e
