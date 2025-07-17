@@ -1,4 +1,5 @@
 import { google } from 'googleapis';
+import fetch from 'node-fetch';
 
 // Google Sheets configuration
 const GOOGLE_SHEETS_API_KEY = 'AIzaSyDcrlt_20kQugjaQ67myqz9aw_hZtvJivY';
@@ -136,17 +137,8 @@ User message: "${userMessage}"${knowledgeContext}
 Respond as Haven (be warm, conversational, and genuinely caring):`;
 };
 
-const systemPrompt = `You are Haven, a caring friend who is always there to talk, process, and listen. Your top priority is building rapport and making the user feel safe, seen, and valued. You are confidential, open-minded, and a soul nurturer in times of distress. You can gently help problem-solve and, if needed, suggest reaching out to a professional, but never use clinical or therapy language.
-
-Guidelines:
-- Always start by building rapport and making the user feel comfortable.
-- Use warm, personal, and friendly language—never clinical or formal.
-- Never mention "mental health journey", "therapy", "counseling", or being "trained to provide" anything.
-- Be open-minded, supportive, and nurturing.
-- If the user is in distress, offer comfort and gentle encouragement.
-- If appropriate, you can suggest talking to a professional, but do so as a caring friend would, not as a therapist.
-- Keep responses short, conversational, and focused on connection.
-- Make every response feel like it comes from a real, caring friend who is always there for them.`;
+// Update the system prompt to include Haven's philosophy
+const systemPrompt = `You are Haven, a warm, emotionally intelligent AI friend. Your philosophy is "comfort is the enemy of excellence"—always supportive, but gently challenging users to grow. Use a compassionate, friendly tone, and follow a 3-stage arc: Compassionate Presence, Crisis Discernment, Empowered Guidance. Include practical tools, reframes, or journaling prompts. Never rush, always invite evolution.`;
 
 export default async function handler(req, res) {
   // Enable CORS
@@ -180,6 +172,13 @@ export default async function handler(req, res) {
     const knowledgeBase = await sheetsService.fetchKnowledgeBase();
     const relevantKnowledge = await sheetsService.searchKnowledgeBase(message, knowledgeBase);
 
+    // Compose the user prompt with growth challenge and knowledge
+    const userPrompt = `User message: "${message}"
+
+${sheetsService.formatKnowledgeForPrompt(relevantKnowledge)}
+
+Respond as Haven, following the philosophy: comfort is the enemy of excellence. Be supportive, warm, and emotionally intelligent, but always gently challenge the user to grow. Use a 3-stage arc: Compassionate Presence, Crisis Discernment, Empowered Guidance. Include practical tools, reframes, or journaling prompts. Never rush, always invite evolution.`;
+
     // Call OpenAI API
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -196,11 +195,11 @@ export default async function handler(req, res) {
           },
           {
             role: 'user',
-            content: getGrowthCoachingPrompt(message, relevantKnowledge)
+            content: userPrompt
           }
         ],
         max_tokens: 300,
-        temperature: 0.7
+        temperature: 0.8
       })
     });
 
@@ -224,39 +223,7 @@ export default async function handler(req, res) {
       timestamp: new Date().toISOString()
     });
   }
-} export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const { message } = req.body;
-
-  try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are Haven, a caring friend who listens and supports. Be warm, conversational, and genuine like a real friend would be.'
-          },
-          {
-            role: 'user',
-            content: message
-          }
-        ],
-        max_tokens: 500,
-      }),
-    });
-
-    const data = await response.json();
-    res.status(200).json({ reply: data.choices[0].message.content });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to get AI response' });
-  }
 }
+git add .
+
+

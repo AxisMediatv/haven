@@ -126,6 +126,7 @@ Remember, even small acts of kindness can make a huge difference in someone's da
     }
 
     try {
+      // Send the user message to the backend API
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -292,3 +293,10 @@ Remember, even small acts of kindness can make a huge difference in someone's da
 };
 
 export default App; 
+// force deploy
+// Force new deployment
+
+
+// git add .
+// git commit -m "Force new deployment"
+// git push
