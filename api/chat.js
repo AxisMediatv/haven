@@ -1,86 +1,5 @@
-import { google } from 'googleapis';
-import fetch from 'node-fetch';
-
-// Google Sheets configuration
-const GOOGLE_SHEETS_API_KEY = 'AIzaSyDcrlt_20kQugjaQ67myqz9aw_hZtvJivY';
-const SHEET_ID = '1zw3n2BUdnNM0pAcxPq7A39HqE0BC8_g2jtjYyV2GD6U';
-
-class SheetsService {
-  constructor() {
-    this.baseUrl = 'https://sheets.googleapis.com/v4/spreadsheets';
-  }
-
-  async fetchKnowledgeBase() {
-    try {
-      const response = await fetch(
-        `${this.baseUrl}/${SHEET_ID}/values/A:Z?key=${GOOGLE_SHEETS_API_KEY}`
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return this.parseSheetData(data.values || []);
-    } catch (error) {
-      console.error('Error fetching knowledge base:', error);
-      return [];
-    }
-  }
-
-  parseSheetData(values) {
-    if (!values || values.length === 0) return [];
-
-    // Assume first row contains headers
-    const headers = values[0];
-    const data = values.slice(1);
-
-    return data.map(row => {
-      const entry = {};
-      headers.forEach((header, index) => {
-        entry[header.toLowerCase().replace(/\s+/g, '_')] = row[index] || '';
-      });
-      return entry;
-    }).filter(entry => 
-      // Filter out empty rows
-      Object.values(entry).some(value => value && value.trim() !== '')
-    );
-  }
-
-  async searchKnowledgeBase(query, knowledgeBase) {
-    if (!knowledgeBase || knowledgeBase.length === 0) return [];
-
-    const searchTerms = query.toLowerCase().split(' ');
-    
-    return knowledgeBase.filter(entry => {
-      const entryText = Object.values(entry)
-        .join(' ')
-        .toLowerCase();
-      
-      return searchTerms.some(term => 
-        entryText.includes(term) && term.length > 2
-      );
-    }).slice(0, 5); // Limit to top 5 matches
-  }
-
-  formatKnowledgeForPrompt(knowledgeEntries) {
-    if (!knowledgeEntries || knowledgeEntries.length === 0) {
-      return '';
-    }
-
-    return `\n\nRelevant knowledge base information:\n${knowledgeEntries
-      .map((entry, index) => {
-        const entryText = Object.entries(entry)
-          .filter(([key, value]) => value && value.trim())
-          .map(([key, value]) => `${key}: ${value}`)
-          .join(' | ');
-        return `${index + 1}. ${entryText}`;
-      })
-      .join('\n')}\n\nUse this information to provide more personalized and relevant support.`;
-  }
-}
-
-const sheetsService = new SheetsService();
+// Simple Vercel serverless function for OpenAI chat
+const fetch = require('node-fetch');
 
 // Crisis keywords for detection
 const crisisKeywords = [
@@ -109,38 +28,10 @@ const getCrisisResponse = () => {
   };
 };
 
-const getGrowthCoachingPrompt = (userMessage, knowledgeEntries = []) => {
-  const knowledgeContext = sheetsService.formatKnowledgeForPrompt(knowledgeEntries);
-  
-  return `You are Haven, a warm, caring best friend who's here to listen and support you. Think of yourself as that friend who always knows exactly what to say - someone who truly cares about you and wants the best for you.
-
-Your personality:
-- Be like talking to your closest, wisest friend - warm, genuine, and emotionally intelligent
-- Use casual, natural language that feels like a real conversation
-- Show personality and warmth in every response
-- Be encouraging and supportive, but also gently honest when needed
-- Use phrases like "I hear you", "That sounds really tough", "I'm here for you"
-- Add little touches of personality - like "You know what?", "Here's the thing", "I totally get that"
-- Be relatable and human - not clinical or formal
-- Show that you genuinely care about their wellbeing
-
-Guidelines:
-- Start with warmth and validation - let them know you see and care about their feelings
-- Then gently help them gain insight into what's really going on
-- Finally, offer a gentle nudge forward or practical support
-- Keep responses conversational and natural (3-5 sentences)
-- Use the knowledge base info to make responses more personal and relevant
-- Always end with warmth and encouragement
-
-User message: "${userMessage}"${knowledgeContext}
-
-Respond as Haven (be warm, conversational, and genuinely caring):`;
-};
-
-// Update the system prompt to include Haven's philosophy
+// System prompt for Haven's philosophy
 const systemPrompt = `You are Haven, a warm, emotionally intelligent AI friend. Your philosophy is "comfort is the enemy of excellence"—always supportive, but gently challenging users to grow. Use a compassionate, friendly tone, and follow a 3-stage arc: Compassionate Presence, Crisis Discernment, Empowered Guidance. Include practical tools, reframes, or journaling prompts. Never rush, always invite evolution.`;
 
-export default async function handler(req, res) {
+module.exports = async (req, res) => {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -168,17 +59,6 @@ export default async function handler(req, res) {
       return res.json(getCrisisResponse());
     }
 
-    // Fetch knowledge base and search for relevant information
-    const knowledgeBase = await sheetsService.fetchKnowledgeBase();
-    const relevantKnowledge = await sheetsService.searchKnowledgeBase(message, knowledgeBase);
-
-    // Compose the user prompt with growth challenge and knowledge
-    const userPrompt = `User message: "${message}"
-
-${sheetsService.formatKnowledgeForPrompt(relevantKnowledge)}
-
-Respond as Haven, following the philosophy: comfort is the enemy of excellence. Be supportive, warm, and emotionally intelligent, but always gently challenge the user to grow. Use a 3-stage arc: Compassionate Presence, Crisis Discernment, Empowered Guidance. Include practical tools, reframes, or journaling prompts. Never rush, always invite evolution.`;
-
     // Call OpenAI API
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -195,7 +75,9 @@ Respond as Haven, following the philosophy: comfort is the enemy of excellence. 
           },
           {
             role: 'user',
-            content: userPrompt
+            content: `User message: "${message}"
+
+Respond as Haven, following the philosophy: comfort is the enemy of excellence. Be supportive, warm, and emotionally intelligent, but always gently challenge the user to grow. Use a 3-stage arc: Compassionate Presence, Crisis Discernment, Empowered Guidance. Include practical tools, reframes, or journaling prompts. Never rush, always invite evolution.`
           }
         ],
         max_tokens: 300,
@@ -223,4 +105,4 @@ Respond as Haven, following the philosophy: comfort is the enemy of excellence. 
       timestamp: new Date().toISOString()
     });
   }
-}
+};
