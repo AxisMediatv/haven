@@ -1,7 +1,7 @@
-// Simple Vercel serverless function for OpenAI chat
+// Simple OpenAI chat API for Vercel
 const fetch = require('node-fetch');
 
-// Crisis keywords for detection
+// Crisis detection
 const crisisKeywords = [
   'suicide', 'kill myself', 'want to die', 'end it all', 'no reason to live',
   'self harm', 'cut myself', 'hurt myself', 'better off dead', 'give up',
@@ -28,16 +28,12 @@ const getCrisisResponse = () => {
   };
 };
 
-// System prompt for Haven's philosophy
-const systemPrompt = `You are Haven, a warm, emotionally intelligent AI friend. Your philosophy is "comfort is the enemy of excellence"—always supportive, but gently challenging users to grow. Use a compassionate, friendly tone, and follow a 3-stage arc: Compassionate Presence, Crisis Discernment, Empowered Guidance. Include practical tools, reframes, or journaling prompts. Never rush, always invite evolution.`;
-
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  // Handle preflight requests
   if (req.method === 'OPTIONS') {
     res.status(200).end();
     return;
@@ -50,17 +46,17 @@ module.exports = async (req, res) => {
   try {
     const { message } = req.body;
 
-    if (!message || typeof message !== 'string') {
+    if (!message) {
       return res.status(400).json({ error: 'Message is required' });
     }
 
-    // Check for crisis keywords
+    // Check for crisis
     if (detectCrisis(message)) {
       return res.json(getCrisisResponse());
     }
 
-    // Call OpenAI API
-    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    // Call OpenAI
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -71,13 +67,11 @@ module.exports = async (req, res) => {
         messages: [
           {
             role: 'system',
-            content: systemPrompt
+            content: 'You are Haven, a warm, caring friend. Your philosophy is "comfort is the enemy of excellence"—always supportive but gently challenging users to grow. Be warm, conversational, and emotionally intelligent.'
           },
           {
             role: 'user',
-            content: `User message: "${message}"
-
-Respond as Haven, following the philosophy: comfort is the enemy of excellence. Be supportive, warm, and emotionally intelligent, but always gently challenge the user to grow. Use a 3-stage arc: Compassionate Presence, Crisis Discernment, Empowered Guidance. Include practical tools, reframes, or journaling prompts. Never rush, always invite evolution.`
+            content: message
           }
         ],
         max_tokens: 300,
@@ -85,11 +79,11 @@ Respond as Haven, following the philosophy: comfort is the enemy of excellence. 
       })
     });
 
-    if (!openaiResponse.ok) {
-      throw new Error(`OpenAI API error: ${openaiResponse.status}`);
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.status}`);
     }
 
-    const data = await openaiResponse.json();
+    const data = await response.json();
     
     return res.json({
       role: 'assistant',
@@ -98,11 +92,11 @@ Respond as Haven, following the philosophy: comfort is the enemy of excellence. 
     });
 
   } catch (error) {
-    console.error('Error in chat API:', error);
+    console.error('Error:', error);
     return res.status(500).json({
       role: 'assistant',
-      content: 'Oh no, I\'m having a little trouble connecting right now. Can you try again in a moment? I really want to be here for you, so don\'t hesitate to reach out again. And remember, if you\'re in crisis, help is always available at 988.',
+      content: 'Sorry, I\'m having trouble connecting right now. Please try again in a moment.',
       timestamp: new Date().toISOString()
     });
   }
-};
+}

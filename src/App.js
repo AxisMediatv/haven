@@ -1,13 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, AlertTriangle, Heart, Gift } from 'lucide-react';
+import { Send, Heart } from 'lucide-react';
 import './App.css';
 
 const App = () => {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [showCrisisAlert, setShowCrisisAlert] = useState(false);
-  const [showPayItForward, setShowPayItForward] = useState(false);
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -45,62 +43,6 @@ const App = () => {
     };
   };
 
-  // Positive keywords for detecting uplifting conversations
-  const positiveKeywords = [
-    'thank you', 'thanks', 'grateful', 'appreciate', 'better', 'improved',
-    'feeling good', 'happy', 'excited', 'hopeful', 'optimistic', 'positive',
-    'breakthrough', 'progress', 'growth', 'learning', 'insight', 'realization',
-    'feeling better', 'much better', 'great', 'wonderful', 'amazing'
-  ];
-
-  const detectPositiveConversation = (messages) => {
-    if (messages.length < 4) return false; // Need at least 4 messages for a meaningful conversation
-    
-    const recentMessages = messages.slice(-4); // Check last 4 messages
-    const userMessages = recentMessages.filter(msg => msg.role === 'user');
-    
-    if (userMessages.length < 2) return false;
-    
-    const userText = userMessages.map(msg => msg.content.toLowerCase()).join(' ');
-    const hasPositiveKeywords = positiveKeywords.some(keyword => userText.includes(keyword));
-    
-    // Also check if the conversation has been going well (no crisis detected)
-    const hasNoCrisis = !recentMessages.some(msg => msg.isCrisis);
-    
-    return hasPositiveKeywords && hasNoCrisis;
-  };
-
-  const handlePayItForward = () => {
-    // Add a message about paying it forward
-    const payItForwardMessage = {
-      role: 'assistant',
-      content: `That's wonderful! Here are some ways you can pay it forward and spread kindness:
-
-**💝 Simple Acts of Kindness:**
-- Send a thoughtful message to someone who's been on your mind
-- Compliment a stranger or colleague
-- Hold the door open for someone
-- Leave an encouraging note for someone
-
-**🤝 Support Others:**
-- Listen to a friend who needs to talk
-- Share your experience with someone going through something similar
-- Volunteer your time to help others
-- Donate to a mental health organization
-
-**🌱 Plant Seeds of Positivity:**
-- Share what you've learned from our conversation
-- Encourage someone to seek help if they're struggling
-- Be the person you needed when you were going through a tough time
-
-Remember, even small acts of kindness can make a huge difference in someone's day. What resonates with you?`,
-      timestamp: new Date().toISOString()
-    };
-    
-    setMessages(prev => [...prev, payItForwardMessage]);
-    setShowPayItForward(false);
-  };
-
   const sendMessage = async () => {
     if (!inputValue.trim()) return;
 
@@ -119,14 +61,12 @@ Remember, even small acts of kindness can make a huge difference in someone's da
 
     // Check for crisis keywords
     if (detectCrisis(userMessage)) {
-      setShowCrisisAlert(true);
       setMessages(prev => [...prev, getCrisisResponse()]);
       setIsLoading(false);
       return;
     }
 
     try {
-      // Send the user message to the backend API
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -150,17 +90,11 @@ Remember, even small acts of kindness can make a huge difference in someone's da
       };
 
       setMessages(prev => [...prev, assistantMessage]);
-      
-      // Check for positive conversation after adding the assistant message
-      const updatedMessages = [...messages, newUserMessage, assistantMessage];
-      if (detectPositiveConversation(updatedMessages)) {
-        setShowPayItForward(true);
-      }
     } catch (error) {
       console.error('Error:', error);
       const errorMessage = {
         role: 'assistant',
-        content: 'Oh no, I\'m having a little trouble connecting right now. Can you check your internet connection and try again? I really want to be here for you, so don\'t hesitate to reach out again. And remember, if you\'re in crisis, help is always available at 988.',
+        content: 'Sorry, I\'m having trouble connecting right now. Please check your internet connection and try again.',
         timestamp: new Date().toISOString()
       };
       setMessages(prev => [...prev, errorMessage]);
@@ -180,11 +114,10 @@ Remember, even small acts of kindness can make a huge difference in someone's da
   useEffect(() => {
     if (messages.length === 0) {
       const greetings = [
-        "Hi, I missed you. How have you been?",
+        "Hi, how are you? What's up?",
         "Hey, it's good to hear from you",
-        "Let's have some one-on-one time to talk",
-        "I'm all ears, let it all out",
-        "It's great to be here with you. What's going on?"
+        "I'm here to listen. What's on your mind?",
+        "Hi there! How are you feeling today?"
       ];
       const randomGreeting = greetings[Math.floor(Math.random() * greetings.length)];
       setMessages([{
@@ -236,35 +169,18 @@ Remember, even small acts of kindness can make a huge difference in someone's da
         </div>
 
         <div className="input-container">
-          {showPayItForward && (
-            <div className="pay-it-forward-container">
-              <button
-                onClick={handlePayItForward}
-                className="pay-it-forward-button"
-              >
-                <Gift size={18} />
-                <span>Pay It Forward</span>
-              </button>
-              <button
-                onClick={() => setShowPayItForward(false)}
-                className="pay-it-forward-dismiss"
-              >
-                Maybe later
-              </button>
-            </div>
-          )}
           <div className="input-wrapper">
             <textarea
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Share what's on your mind..."
-              rows="1"
+              placeholder="Type your message..."
               className="message-input"
+              rows="1"
             />
             <button
               onClick={sendMessage}
-              disabled={!inputValue.trim() || isLoading}
+              disabled={isLoading || !inputValue.trim()}
               className="send-button"
             >
               <Send size={20} />
@@ -272,31 +188,8 @@ Remember, even small acts of kindness can make a huge difference in someone's da
           </div>
         </div>
       </main>
-
-      {showCrisisAlert && (
-        <div className="crisis-alert">
-          <div className="crisis-content">
-            <AlertTriangle className="crisis-icon" />
-            <h3>Crisis Resources Available</h3>
-            <p>If you're in immediate danger, please call emergency services (911) or the National Suicide Prevention Lifeline (988).</p>
-            <button 
-              onClick={() => setShowCrisisAlert(false)}
-              className="crisis-dismiss"
-            >
-              I understand
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
 
-export default App; 
-// force deploy
-// Force new deployment
-
-
-// git add .
-// git commit -m "Force new deployment"
-// git push
+export default App;
